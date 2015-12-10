@@ -7,9 +7,9 @@ std::string exec(const char* cmd);
 
 int main() {
     // keep backing up.
-    while (true) {
-    	std::string result = exec("mongodump --quiet");
-    }
+    // while (true) {
+    	std::string result = exec("mongodump --oplog --quiet");
+    //}
 }
 
 std::string exec(const char* cmd) {

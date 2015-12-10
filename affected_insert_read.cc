@@ -45,9 +45,6 @@ int main(int argc, char** argv) {
     
     for (int i = 0; i <= max_insert_size; i++) {
 	int insert_size = (int)(pow(2, i)*1024*3.185);
-	// measure the insert time
-        struct timespec start, end;
-	clock_gettime(CLOCK_MONOTONIC, &start);
 	for (int j = 0; j < insert_size; j++) {
     		auto restaurant_doc = document{} << "address" << open_document << "street"
                                      << "2 Avenue"
@@ -69,35 +66,11 @@ int main(int argc, char** argv) {
                                      << "score" << 17 << close_document << close_array << "name"
                                      << "Vella"
                                      << "restaurant_id"
-                                     << "41704620" << finalize;
+                                     << "b" + std::to_string(j) << finalize;
     		auto res = db["restaurants"].insert_one(restaurant_doc);
 	  }
-          clock_gettime(CLOCK_MONOTONIC, &end);
-          double passed_time = ((double)BILLION*end.tv_sec+end.tv_nsec-(double)BILLION*start.tv_sec-start.tv_nsec)*1.0/BILLION;
-	  insert_time.push_back(passed_time);
-
-	  // Now measure read time
-          struct timespec read_start, read_end;
-          clock_gettime(CLOCK_MONOTONIC, &read_start);
-          auto cursor = db["restaurants"].find({});
-          int read_count = 0;
-	  for (auto&& doc : cursor) {
-              read_count++;
-          }
-          clock_gettime(CLOCK_MONOTONIC, &read_end);
-	  passed_time = ((double)BILLION*read_end.tv_sec+read_end.tv_nsec-
-		(double)BILLION*read_start.tv_sec-read_start.tv_nsec)*1.0/BILLION;
-          read_time.push_back(passed_time);      
-           
-          db["restaurants"].drop(); // Drop the table 
-    }
-    std::cout << "Affected insert time: k MB, sec" << std::endl;
-    for (int i = 0; i <= max_insert_size; i++)
-        std::cout << insert_time[i] << std::endl;
-    std::cout << "Affected read time: k MB, sec" << std::endl;
-    for (int i = 0; i <= max_insert_size; i++)
-        std::cout << read_time[i] << std::endl;
-    return 0;
+     }
+   return 0;
 }
 
 std::string exec(const char* cmd) {

@@ -43,6 +43,29 @@ int main(int argc, char** argv) {
     std::vector<double> read_time;
     std::vector<double> backup_time; 
     
+         		auto restaurant_doc = document{} << "address" << open_document << "street"
+                                     << "2 Avenue"
+                                     << "zipcode"
+                                     << "10075"
+                                     << "building"
+                                     << "1480"
+                                     << "coord" << open_array << -73.9557413 << 40.7720266
+                                     << close_array << close_document << "borough"
+                                     << "Manhattan"
+                                     << "cuisine"
+                                     << "Italian"
+                                     << "grades" << open_array << open_document << "date"
+                                     << bsoncxx::types::b_date{12323} << "grade"
+                                     << "A"
+                                     << "score" << 11 << close_document << open_document << "date"
+                                     << bsoncxx::types::b_date{121212} << "grade"
+                                     << "B"
+                                     << "score" << 17 << close_document << close_array << "name"
+                                     << "Vella"
+                                     << "restaurant_id"
+                                     << "41704620" << finalize;
+    		auto res = db["restaurants"].insert_one(restaurant_doc); 
+   
     // We first drop the whole test collection.
     db["restaurants"].drop();
     
@@ -69,14 +92,13 @@ int main(int argc, char** argv) {
                                      << "score" << 17 << close_document << close_array << "name"
                                      << "Vella"
                                      << "restaurant_id"
-                                     << "41704620" << finalize;
+                                     << "a" + std::to_string(j) << finalize;
     		auto res = db["restaurants"].insert_one(restaurant_doc); 
       }
       clock_gettime(CLOCK_MONOTONIC, &end);
       double passed_time = ((double)BILLION*end.tv_sec+end.tv_nsec-(double)BILLION*start.tv_sec-start.tv_nsec)*1.0/BILLION;
       insert_time.push_back(passed_time);
 
-      double primary_count  = db["restaurants"].count({});
       return 0;
 }
 

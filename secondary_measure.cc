@@ -33,24 +33,52 @@ int main(int argc, char** argv) {
     auto db = conn["test"];
     
     int max_insert_size;
+    int str_size;
+    int interval; // milli second
     if (argc <= 1) {
 	std::cout << "There are not enough command line arguments" << std::endl;
     } else {
 	max_insert_size = atoi(argv[1]);
-        max_insert_size = (int)(pow(2,max_insert_size)*1024*3.185);	
+        str_size = atoi(argv[2]);
+        interval = atoi(argv[3]);	
     }
     std::vector<double> insert_time;
     std::vector<double> read_time;
     std::vector<double> backup_time; 
+
+    // We first drop the whole test collection, if not create a collection.
+    std::string street_name = std::string(str_size, 'a');
+    // std::cout << street_name << std::endl;
+      		auto restaurant_doc = document{} << "address" << open_document << "street"
+                                     << street_name
+                                     << "zipcode"
+                                     << "10075"
+                                     << "building"
+                                     << "1480"
+                                     << "coord" << open_array << -73.9557413 << 40.7720266
+                                     << close_array << close_document << "borough"
+                                     << "Manhattan"
+                                     << "cuisine"
+                                     << "Italian"
+                                     << "grades" << open_array << open_document << "date"
+                                     << bsoncxx::types::b_date{12323} << "grade"
+                                     << "A"
+                                     << "score" << 11 << close_document << open_document << "date"
+                                     << bsoncxx::types::b_date{121212} << "grade"
+                                     << "B"
+                                     << "score" << 17 << close_document << close_array << "name"
+                                     << "Vella"
+                                     << "restaurant_id"
+                                     << "41704620" << finalize;
+    		auto res = db["restaurants"].insert_one(restaurant_doc); 
     
-    // We first drop the whole test collection.
-    db["restaurants"].drop();
+     db["restaurants"].drop();
     
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (int j = 0; j < max_insert_size; j++) {
     		auto restaurant_doc = document{} << "address" << open_document << "street"
-                                     << "2 Avenue"
+                                     << street_name
                                      << "zipcode"
                                      << "10075"
                                      << "building"
@@ -76,7 +104,29 @@ int main(int argc, char** argv) {
       double passed_time = ((double)BILLION*end.tv_sec+end.tv_nsec-(double)BILLION*start.tv_sec-start.tv_nsec)*1.0/BILLION;
       insert_time.push_back(passed_time);
 
-      double primary_count  = db["restaurants"].count({});
+      std::cout << "insert time:" << passed_time << std::endl;
+      // Init secondary connection
+      mongocxx::instance secondary_inst{};
+      bsoncxx::stdx::string_view connectionString("mongodb://node1.mongodb-sv-fl.uw-cs739-f2015.emulab.net:27017");
+      mongocxx::client secondary_conn{mongocxx::uri{connectionString}};
+      auto s_db = secondary_conn["test"];
+
+      int primary_count  = db["restaurants"].count({});
+
+      // query the size of the secondary.
+      int secondary_count  = s_db["restaurants"].count({});
+
+      std::cout << "The primary size: " << primary_count << std::endl;
+      std::cout << "The secondary size: " << secondary_count << std::endl;
+      while (primary_count != secondary_count) {
+         sleep(interval*0.001);
+         primary_count  = db["restaurants"].count({});
+         secondary_count  = s_db["restaurants"].count({});
+
+         std::cout << "The primary size: " << primary_count << std::endl;
+         std::cout << "The secondary size: " << secondary_count << std::endl;
+      }
+       
       return 0;
 }
 

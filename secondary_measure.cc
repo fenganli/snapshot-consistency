@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     std::vector<double> backup_time; 
 
     // We first drop the whole test collection, if not create a collection.
-    std::string street_name = std::string(str_size, 'a');
+    std::string street_name = std::string(1024*1024*str_size, 'a');
     // std::cout << street_name << std::endl;
       		auto restaurant_doc = document{} << "address" << open_document << "street"
                                      << street_name
@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
     		auto res = db["restaurants"].insert_one(restaurant_doc); 
     
      db["restaurants"].drop();
+     sleep(10);
     
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
@@ -97,9 +98,11 @@ int main(int argc, char** argv) {
                                      << "score" << 17 << close_document << close_array << "name"
                                      << "Vella"
                                      << "restaurant_id"
-                                     << "41704620" << finalize;
+                                     << "c" + std::to_string(j) << finalize;
     		auto res = db["restaurants"].insert_one(restaurant_doc); 
       }
+      //std::string result = exec( "/users/fli69/snapshot-consistency/mongodump_secondary.sh");
+      //std::cout << "secondary dump results: " << result << std::endl;
       clock_gettime(CLOCK_MONOTONIC, &end);
       double passed_time = ((double)BILLION*end.tv_sec+end.tv_nsec-(double)BILLION*start.tv_sec-start.tv_nsec)*1.0/BILLION;
       insert_time.push_back(passed_time);
@@ -119,14 +122,17 @@ int main(int argc, char** argv) {
       std::cout << "The primary size: " << primary_count << std::endl;
       std::cout << "The secondary size: " << secondary_count << std::endl;
       while (primary_count != secondary_count) {
-         sleep(interval*0.001);
-         primary_count  = db["restaurants"].count({});
-         secondary_count  = s_db["restaurants"].count({});
+       primary_count  = db["restaurants"].count({});
+        secondary_count  = s_db["restaurants"].count({});
 
-         std::cout << "The primary size: " << primary_count << std::endl;
-         std::cout << "The secondary size: " << secondary_count << std::endl;
+      std::cout << "The primary size: " << primary_count << std::endl;
+      std::cout << "The secondary size: " << secondary_count << std::endl;
+        
+      // system("/users/fli69/snapshot-consistency/mongodump_secondary.sh");
+      // std::string result = exec( "/users/fli69/snapshot-consistency/mongodump_secondary.sh");
+      sleep(interval*0.001);
       }
-       
+      	 
       return 0;
 }
 

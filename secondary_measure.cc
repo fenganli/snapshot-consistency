@@ -47,8 +47,9 @@ int main(int argc, char** argv) {
     std::vector<double> backup_time; 
 
     // We first drop the whole test collection, if not create a collection.
-    std::string street_name = std::string(1024*1024*str_size, 'a');
+    std::string street_name = std::string(str_size, 'a');
     // std::cout << street_name << std::endl;
+/*
       		auto restaurant_doc = document{} << "address" << open_document << "street"
                                      << street_name
                                      << "zipcode"
@@ -71,7 +72,7 @@ int main(int argc, char** argv) {
                                      << "restaurant_id"
                                      << "41704620" << finalize;
     		auto res = db["restaurants"].insert_one(restaurant_doc); 
-    
+  */  
      db["restaurants"].drop();
      sleep(10);
     

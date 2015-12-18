@@ -33,46 +33,22 @@ int main(int argc, char** argv) {
     auto db = conn["test"];
     
     int max_insert_size;
+    int str_size;
+    int interval; // milli second
     if (argc <= 1) {
 	std::cout << "There are not enough command line arguments" << std::endl;
     } else {
-	max_insert_size = atoi(argv[1]);	
+	max_insert_size = atoi(argv[1]);
+        str_size = atoi(argv[2]);
     }
-    std::vector<double> insert_time;
-    std::vector<double> read_time;
-    // We first drop the whole test collection.
-    auto restaurant_doc = document{} << "address" << open_document << "street"
-                                     << "2 Avenue"
-                                     << "zipcode"
-                                     << "10075"
-                                     << "building"
-                                     << "1480"
-                                     << "coord" << open_array << -73.9557413 << 40.7720266
-                                     << close_array << close_document << "borough"
-                                     << "Manhattan"
-                                     << "cuisine"
-                                     << "Italian"
-                                     << "grades" << open_array << open_document << "date"
-                                     << bsoncxx::types::b_date{12323} << "grade"
-                                     << "A"
-                                     << "score" << 11 << close_document << open_document << "date"
-                                     << bsoncxx::types::b_date{121212} << "grade"
-                                     << "B"
-                                     << "score" << 17 << close_document << close_array << "name"
-                                     << "Vella"
-                                     << "restaurant_id"
-                                     << "41704620" << finalize;
-    auto res = db["restaurants"].insert_one(restaurant_doc);
-    db["restaurants"].drop();
     
-    for (int i = 0; i <= max_insert_size; i++) {
-	int insert_size = (int)(pow(2, i)*1024*3.185);
-	// measure the insert time
-        struct timespec start, end;
-	clock_gettime(CLOCK_MONOTONIC, &start);
-	for (int j = 0; j < insert_size; j++) {
-    		auto restaurant_doc = document{} << "address" << open_document << "street"
-                                     << "2 Avenue"
+    std::vector<double> backup_time; 
+
+    // We first drop the whole test collection, if not create a collection.
+    std::string street_name = std::string(1024*1024*str_size, 'a');
+
+      		auto restaurant_doc = document{} << "address" << open_document << "street"
+                                     << street_name
                                      << "zipcode"
                                      << "10075"
                                      << "building"
@@ -92,34 +68,45 @@ int main(int argc, char** argv) {
                                      << "Vella"
                                      << "restaurant_id"
                                      << "41704620" << finalize;
-    		auto res = db["restaurants"].insert_one(restaurant_doc);
-	  }
-          clock_gettime(CLOCK_MONOTONIC, &end);
-          double passed_time = ((double)BILLION*end.tv_sec+end.tv_nsec-(double)BILLION*start.tv_sec-start.tv_nsec)*1.0/BILLION;
-	  insert_time.push_back(passed_time);
+    		auto res = db["restaurants"].insert_one(restaurant_doc); 
+     db["restaurants"].drop();
+     sleep(10);
+    
+    struct timespec start, end;
+    for (int j = 0; j < max_insert_size; j++) {
+    		auto restaurant_doc = document{} << "address" << open_document << "street"
+                                     << street_name
+                                     << "zipcode"
+                                     << "10075"
+                                     << "building"
+                                     << "1480"
+                                     << "coord" << open_array << -73.9557413 << 40.7720266
+                                     << close_array << close_document << "borough"
+                                     << "Manhattan"
+                                     << "cuisine"
+                                     << "Italian"
+                                     << "grades" << open_array << open_document << "date"
+                                     << bsoncxx::types::b_date{12323} << "grade"
+                                     << "A"
+                                     << "score" << 11 << close_document << open_document << "date"
+                                     << bsoncxx::types::b_date{121212} << "grade"
+                                     << "B"
+                                     << "score" << 17 << close_document << close_array << "name"
+                                     << "Vella"
+                                     << "restaurant_id"
+                                     << "c" + std::to_string(j) << finalize;
+    		auto res = db["restaurants"].insert_one(restaurant_doc); 
+      }
 
-	  // Now measure read time
-          struct timespec read_start, read_end;
-          clock_gettime(CLOCK_MONOTONIC, &read_start);
-          auto cursor = db["restaurants"].find({});
-          int read_count = 0;
-	  for (auto&& doc : cursor) {
-              read_count++;
-          }
-          clock_gettime(CLOCK_MONOTONIC, &read_end);
-	  passed_time = ((double)BILLION*read_end.tv_sec+read_end.tv_nsec-
-		(double)BILLION*read_start.tv_sec-read_start.tv_nsec)*1.0/BILLION;
-          read_time.push_back(passed_time);      
-           
-          db["restaurants"].drop(); // Drop the table 
-    }
-    std::cout << "Affected insert time: k MB, sec" << std::endl;
-    for (int i = 0; i <= max_insert_size; i++)
-        std::cout << insert_time[i] << std::endl;
-    std::cout << "Affected read time: k MB, sec" << std::endl;
-    for (int i = 0; i <= max_insert_size; i++)
-        std::cout << read_time[i] << std::endl;
-    return 0;
+      
+      clock_gettime(CLOCK_MONOTONIC, &start);	
+      std::string result = exec("bash /users/fli69/snapshot-consistency/newmongodump_measure.sh");
+      clock_gettime(CLOCK_MONOTONIC, &end);
+      double passed_time = ((double)BILLION*end.tv_sec+end.tv_nsec-(double)BILLION*start.tv_sec-start.tv_nsec)*1.0/BILLION;
+      backup_time.push_back(passed_time); 
+      std::cout << "backup time:" << passed_time << std::endl;
+
+      return 0;
 }
 
 std::string exec(const char* cmd) {

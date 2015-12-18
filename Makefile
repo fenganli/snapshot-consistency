@@ -13,3 +13,5 @@ clean:
 	rm -rf insert_read_backup
 	rm -rf secondary_measure
 	rm -rf dump
+	rm -rf *.output
+	rm -rf mongodump_measure
